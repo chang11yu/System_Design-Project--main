@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>月女涼麵進銷存系統</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主選單">
+      <div class="brand">
+        <div class="brand-mark">月</div>
+        <div>
+          <h1>月女涼麵</h1>
+          <p>進銷存管理系統</p>
+        </div>
+      </div>
+
+      <nav class="nav-list">
+        <button class="nav-item active" data-page="dashboard">首頁總覽</button>
+        <button class="nav-item" data-page="sales">銷售紀錄</button>
+        <button class="nav-item" data-page="inventory">庫存管理</button>
+        <button class="nav-item" data-page="purchase">進貨管理</button>
+        <button class="nav-item" data-page="forecast">備貨建議</button>
+        <button class="nav-item" data-page="reports">報表分析</button>
+        <button class="nav-item" data-page="suppliers">供應商管理</button>
+      </nav>
+
+      <div class="sidebar-note">
+        <strong>今日營業</strong>
+        <span>嘉義老店，簡單記、清楚看。</span>
+        <span id="connectionStatus" class="connection-status">正在連接系統...</span>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+      <section id="dashboard" class="page active">
+        <div class="page-heading">
+          <div>
+            <h2>首頁總覽</h2>
+            <p>老闆娘一打開就能看到今天營收、庫存提醒和待處理進貨。</p>
+          </div>
+          <span id="todayLabel" class="date-pill"></span>
+        </div>
+
+        <div id="dashboardMetrics" class="metric-grid"></div>
+
+        <div class="content-grid two-col">
+          <article class="card">
+            <div class="card-title">
+              <h3>今日狀況</h3>
+              <span id="dashboardAlertTag" class="tag tag-normal">正常</span>
+            </div>
+            <div id="dashboardAlerts" class="alert-list"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-title">
+              <h3>備貨清單</h3>
+              <span class="tag tag-normal">最近一次計算</span>
+            </div>
+            <div id="dashboardForecast" class="recommend-list"></div>
+            <button class="btn btn-primary" data-jump="forecast">重新計算備貨</button>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-title">
+            <h3>常用操作</h3>
+            <p>尖峰時段先點這裡，少找選單。</p>
+          </div>
+          <div class="quick-actions">
+            <button class="btn btn-primary" data-jump="sales">新增銷售</button>
+            <button class="btn btn-secondary" data-jump="purchase">進貨驗收</button>
+            <button class="btn btn-secondary" data-jump="inventory">庫存盤點</button>
+            <button class="btn btn-secondary" data-jump="reports">查看報表</button>
+          </div>
+        </article>
+
+      </section>
+
+      <section id="sales" class="page">
+        <div class="page-heading">
+          <div>
+            <h2>銷售紀錄</h2>
+            <p>用商品按鈕快速點選，完成銷售時會依物料清單自動扣庫存。</p>
+          </div>
+        </div>
+
+        <div class="sales-layout">
+          <article class="card">
+            <div class="card-title">
+              <h3>快速點餐</h3>
+              <span class="tag tag-normal">按 + - 調整</span>
+            </div>
+            <div id="productGrid" class="product-grid"></div>
+          </article>
+
+          <article class="card order-card">
+            <div class="card-title">
+              <h3>本筆銷售</h3>
+              <p>確認後直接完成銷售。</p>
+            </div>
+            <div id="currentOrder" class="order-summary empty">尚未選擇商品</div>
+            <div class="total-row">
+              <span>總金額</span>
+              <strong id="salesTotal">$0</strong>
+            </div>
+            <div class="button-row">
+              <button id="addSaleBtn" class="btn btn-secondary">加入銷售清單</button>
+              <button id="completeSaleBtn" class="btn btn-primary">完成銷售</button>
+            </div>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-title">
+            <h3>今日銷售明細</h3>
+            <p>刪除誤記項目時，系統會把原料庫存加回來。</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>商品名稱</th>
+                  <th>數量</th>
+                  <th>單價</th>
+                  <th>小計</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="salesTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="inventory" class="page">
+        <div class="page-heading">
+          <div>
+            <h2>庫存管理</h2>
+            <p>查看原料庫存、低庫存、即將過期和報廢紀錄。</p>
+          </div>
+        </div>
+
+        <div class="content-grid two-col">
+          <article class="card">
+            <div class="card-title">
+              <h3>新增庫存原料</h3>
+              <p>數量與安全庫存不可為負數。</p>
+            </div>
+            <form id="inventoryForm" class="form-grid">
+              <label>原料名稱<input id="invName" type="text" placeholder="例如：蛋絲" required></label>
+              <label>現有庫存<input id="invStock" type="number" min="0" step="0.01" value="0" required></label>
+              <label>單位<input id="invUnit" type="text" placeholder="包、條、罐" required></label>
+              <label>安全庫存<input id="invSafe" type="number" min="0" step="0.01" value="1" required></label>
+              <label>保存期限（天）<input id="invExpiry" type="number" min="0" value="3" required></label>
+              <button class="btn btn-primary form-full" type="submit">新增原料</button>
+            </form>
+          </article>
+
+          <article class="card">
+            <div class="card-title">
+              <h3>報廢登記</h3>
+              <p>報廢數量不可大於現有庫存。</p>
+            </div>
+            <form id="wasteForm" class="form-grid">
+              <label class="form-full">原料<select id="wasteItem" required></select></label>
+              <label>報廢數量<input id="wasteQty" type="number" min="0" step="0.01" value="0" required></label>
+              <label>原因<input id="wasteReason" type="text" placeholder="過期、變質..." required></label>
+              <button class="btn btn-secondary form-full" type="submit">記錄報廢</button>
+            </form>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-title">
+            <h3>原料庫存表</h3>
+            <p>系統會依現有庫存與保存期限自動標示狀態。</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>原料編號</th>
+                  <th>原料名稱</th>
+                  <th>現有庫存</th>
+                  <th>單位</th>
+                  <th>安全庫存</th>
+                  <th>保存期限</th>
+                  <th>狀態</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryTable"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <div class="content-grid two-col">
+          <article class="card">
+            <div class="card-title">
+              <div>
+                <h3>BOM 配方設定</h3>
+                <p>設定每賣出一份餐點需要扣除多少原料。</p>
+              </div>
+            </div>
+            <form id="bomForm" class="form-grid">
+              <label>餐點<select id="bomProduct" required></select></label>
+              <label>原料<select id="bomMaterial" required></select></label>
+              <label class="form-full">每份消耗量<input id="bomQty" type="number" min="0.0001" step="0.0001" required></label>
+              <button class="btn btn-primary form-full" type="submit">新增配方</button>
+            </form>
+          </article>
+
+          <article class="card">
+            <div class="card-title">
+              <div>
+                <h3>配方清單</h3>
+                <p>銷售完成後會依這裡的設定自動扣庫存。</p>
+              </div>
+            </div>
+            <div class="table-wrap compact-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>餐點</th>
+                    <th>原料</th>
+                    <th>每份用量</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="bomTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-title">
+            <div>
+              <h3>最近報廢紀錄</h3>
+              <p>方便核對報廢日期、數量與原因。</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>日期</th>
+                  <th>原料</th>
+                  <th>數量</th>
+                  <th>原因</th>
+                </tr>
+              </thead>
+              <tbody id="wasteTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="purchase" class="page">
+        <div class="page-heading">
+          <div>
+            <h2>進貨管理</h2>
+            <p>新增進貨單、驗收實收數量，完成後同步更新庫存。</p>
+          </div>
+        </div>
+
+        <article class="card">
+          <div class="card-title">
+            <h3>新增進貨單</h3>
+            <p>訂購數量必須大於 0，完成驗收後才會增加庫存。</p>
+          </div>
+          <form id="purchaseForm" class="form-grid purchase-form">
+            <label>供應商<select id="poSupplier" required></select></label>
+            <label>原料品項<select id="poItem" required></select></label>
+            <label>訂購數量<input id="poQty" type="number" min="1" step="0.01" value="1" required></label>
+            <button class="btn btn-primary" type="submit">新增進貨單</button>
+          </form>
+        </article>
+
+        <article class="card">
+          <div class="card-title">
+            <h3>進貨單列表</h3>
+            <p>已驗收或異常的進貨單不可再修改。</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>進貨單號</th>
+                  <th>進貨日期</th>
+                  <th>供應商</th>
+                  <th>品項</th>
+                  <th>訂購數量</th>
+                  <th>狀態</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="purchaseTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="forecast" class="page">
+        <div class="page-heading">
+          <div>
+            <h2>備貨建議</h2>
+            <p>依天氣、假日、節日與嘉義活動估算今日建議準備量，實際補貨由老闆娘決定。</p>
+          </div>
+        </div>
+
+        <div class="content-grid two-col forecast-grid">
+          <article class="card">
+            <div class="card-title">
+              <h3>今日條件</h3>
+              <p>選擇今天的外部條件，系統只提供需求參考，不會修改庫存。</p>
+            </div>
+            <form id="forecastForm" class="form-grid">
+              <label>天氣狀況
+                <select id="weather">
+                  <option value="cloudy">陰天</option>
+                  <option value="rainy">雨天</option>
+                  <option value="sunny">晴天</option>
+                </select>
+              </label>
+              <label>是否假日
+                <select id="holiday">
+                  <option value="weekday">平日</option>
+                  <option value="holiday">假日</option>
+                </select>
+              </label>
+              <label>特殊節日
+                <select id="festival">
+                  <option value="no">否</option>
+                  <option value="yes">是</option>
+                </select>
+              </label>
+              <label>嘉義市活動
+                <select id="cityEvent">
+                  <option value="none">無</option>
+                  <option value="small">小型</option>
+                  <option value="large">大型</option>
+                </select>
+              </label>
+              <button class="btn btn-primary form-full" type="submit">重新計算備貨</button>
+            </form>
+          </article>
+
+          <article class="card result-card">
+            <div class="card-title">
+              <h3>預估結果</h3>
+              <span class="tag tag-normal">安全庫存 +10%</span>
+            </div>
+            <div class="forecast-result">
+              <div>
+                <span>預估銷售量</span>
+                <strong id="forecastBase">0 碗</strong>
+              </div>
+              <div>
+                <span>建議備貨量</span>
+                <strong id="forecastSafe">0 碗</strong>
+              </div>
+            </div>
+            <p class="helper-text">此結果為系統建議，仍可依實際來客狀況調整。</p>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-title">
+            <h3>原料換算結果</h3>
+            <p>只顯示建議準備量，不扣除現有庫存，也不代表一定要採購。</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>項目</th>
+                  <th class="text-right">建議準備量</th>
+                </tr>
+              </thead>
+              <tbody id="forecastTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="reports" class="page">
+        <div class="page-heading">
+          <div>
+            <h2>報表分析</h2>
+            <p>依系統中的銷售、進貨、報廢與庫存資料整理營運概況。</p>
+          </div>
+        </div>
+
+        <article class="card">
+          <div class="card-title">
+            <h3>篩選條件</h3>
+            <p>開始日期不可晚於結束日期。</p>
+          </div>
+          <form id="reportFilter" class="form-grid report-filter">
+            <label>開始日期<input id="startDate" type="date"></label>
+            <label>結束日期<input id="endDate" type="date"></label>
+            <label>商品<select id="filterProduct"></select></label>
+            <label>原料<select id="filterMaterial"></select></label>
+            <button class="btn btn-primary" type="submit">套用篩選</button>
+          </form>
+        </article>
+
+        <div id="reportEmpty" class="empty-state hidden">目前查無資料</div>
+        <div id="reportContent" class="report-stack">
+          <section class="report-section">
+            <div id="reportSummary" class="metric-grid"></div>
+          </section>
+
+          <article class="card report-section">
+            <div class="card-title">
+              <h3>營收趨勢</h3>
+              <p>依銷售紀錄日期彙整每日營收。</p>
+            </div>
+            <div id="revenueChart" class="bar-chart"></div>
+          </article>
+
+          <article class="card report-section">
+            <div class="card-title">
+              <h3>熱門品項排行</h3>
+              <p>依目前銷售明細加總各商品數量。</p>
+            </div>
+            <div id="productRankChart" class="rank-chart"></div>
+          </article>
+
+          <article class="card report-section">
+            <div class="card-title">
+              <h3>原料損耗分析</h3>
+              <p>從報廢登記紀錄統計各原料損耗。</p>
+            </div>
+            <div id="wasteChart" class="waste-list"></div>
+          </article>
+
+          <article class="card report-section">
+            <div class="card-title">
+              <h3>進銷存總覽</h3>
+              <p>彙整篩選期間的進貨、銷售扣料、報廢與目前庫存。</p>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>原料</th>
+                    <th>目前庫存</th>
+                    <th>期間進貨</th>
+                    <th>銷售耗用</th>
+                    <th>報廢量</th>
+                    <th>狀態</th>
+                  </tr>
+                </thead>
+                <tbody id="stockOverviewTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="suppliers" class="page">
+        <div class="page-heading">
+          <div>
+            <h2>供應商管理</h2>
+            <p>管理供應商聯絡資料與供應品項。</p>
+          </div>
+        </div>
+
+        <article class="card">
+          <div class="card-title">
+            <h3 id="supplierFormTitle">新增供應商</h3>
+            <p>集中保存聯絡資訊，方便進貨時快速查找。</p>
+          </div>
+          <form id="supplierForm" class="form-grid supplier-form">
+            <input id="supplierEditId" type="hidden">
+            <label>供應商名稱<input id="supplierName" type="text" required></label>
+            <label>聯絡人<input id="supplierContact" type="text"></label>
+            <label>電話<input id="supplierPhone" type="tel" required></label>
+            <label>地址<input id="supplierAddress" type="text"></label>
+            <button class="btn btn-primary" type="submit">儲存供應商</button>
+            <button id="cancelSupplierEdit" class="btn btn-ghost" type="button">取消修改</button>
+          </form>
+        </article>
+
+        <article class="card">
+          <div class="card-title">
+            <h3>供應商列表</h3>
+            <p>若已有進貨紀錄，系統會提醒不建議刪除。</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>供應商編號</th>
+                  <th>供應商名稱</th>
+                  <th>聯絡人</th>
+                  <th>電話</th>
+                  <th>地址</th>
+                  <th>供應品項</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="supplierTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-panel">
+      <h3 id="modalTitle">進貨驗收</h3>
+      <form id="receiveForm" class="form-grid">
+        <input id="receiveId" type="hidden">
+        <label>實收數量<input id="receiveQty" type="number" min="0" step="0.01" required></label>
+        <label class="form-full">品質備註<input id="receiveNote" type="text" placeholder="例如：品質正常、數量短少"></label>
+        <div class="button-row form-full">
+          <button class="btn btn-primary" type="submit">完成驗收</button>
+          <button id="closeModal" class="btn btn-ghost" type="button">取消</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

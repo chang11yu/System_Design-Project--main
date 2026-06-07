@@ -1,0 +1,13 @@
+月女涼麵進銷存系統
+
+開啟：
+雙擊 START_SYSTEM.bat
+
+關閉：
+雙擊 STOP_SYSTEM.bat
+
+資料會自動儲存在：
+System_Design-Project--main\coolnoodle.db
+
+不需要另外啟動 XAMPP、MySQL 或 phpMyAdmin。
+請不要直接雙擊 index.html，因為瀏覽器無法自行啟動 Flask。
