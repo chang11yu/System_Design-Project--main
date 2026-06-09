@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
+.server.pid
+server.log
+server-error.log
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db

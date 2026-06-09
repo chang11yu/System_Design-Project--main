@@ -1,67 +1,52 @@
-# 月女涼麵進銷存系統
+# 月女涼麵進銷存管理系統
 
-## 最簡單的啟動方式
+## 本機一鍵啟動
 
-不要直接雙擊 `index.html`。
-
-請雙擊：
+請執行：
 
 ```text
 START_SYSTEM.bat
 ```
 
-啟動器會自動完成：
+第一次啟動會自動：
 
-1. 建立專案專用 Python 環境。
-2. 安裝 Flask 等必要套件。
+1. 建立 Python 虛擬環境。
+2. 安裝 Flask 與所需套件。
 3. 建立 `coolnoodle.db` SQLite 資料庫。
-4. 建立資料表及範例資料。
+4. 建立資料表與範例資料。
 5. 啟動 Flask。
 6. 開啟 `http://127.0.0.1:5000`。
 
-第一次啟動需要安裝套件，因此會比之後稍久。後續只要再次雙擊
-`START_SYSTEM.bat` 即可。
-
-## 關閉系統
-
-雙擊：
+停止系統請執行：
 
 ```text
 STOP_SYSTEM.bat
 ```
 
-## 資料存放位置
+## GitHub 與線上資料同步
 
-所有資料預設存放於：
+GitHub Pages 只能提供靜態網頁，不能執行 Flask，也不能同步專案內的 SQLite 檔案。
 
-```text
-coolnoodle.db
-```
+本專案已支援：
 
-不需要啟動 XAMPP、MySQL 或 phpMyAdmin。
+- GitHub：保存程式碼。
+- Render：執行 Flask 網站與 API。
+- Neon PostgreSQL：保存所有裝置共用的資料。
+- GitHub Pages：可選用的靜態前端網址。
 
-若要清空並重新建立示範資料，先關閉系統，再刪除 `coolnoodle.db`，
-重新執行 `START_SYSTEM.bat`。
+完整設定請看 [DEPLOYMENT.md](DEPLOYMENT.md)。
 
 ## 手動啟動
-
-已完成第一次安裝後，也可以使用：
 
 ```powershell
 .\.venv\Scripts\python.exe app.py
 ```
 
-接著開啟：
+開啟：
 
 ```text
 http://127.0.0.1:5000
 ```
 
-## 切換到 MySQL（選用）
+未設定 `DATABASE_URL` 時，系統會使用本機 SQLite。線上部署時請透過環境變數提供 PostgreSQL 連線字串。
 
-系統預設使用 SQLite。如果之後確定需要 MySQL，可在啟動前設定：
-
-```powershell
-$env:DATABASE_URL="mysql+pymysql://root:密碼@localhost/coolnoodle"
-.\.venv\Scripts\python.exe app.py
-```

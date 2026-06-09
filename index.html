@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
   <title>月女涼麵進銷存系統</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -18,7 +19,7 @@
       </div>
 
       <nav class="nav-list">
-        <button class="nav-item active" data-page="dashboard">首頁總覽</button>
+        <button class="nav-item active" data-page="guide">功能導覽</button>
         <button class="nav-item" data-page="sales">銷售紀錄</button>
         <button class="nav-item" data-page="inventory">庫存管理</button>
         <button class="nav-item" data-page="purchase">進貨管理</button>
@@ -37,56 +38,70 @@
     <main class="main-content">
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-      <section id="dashboard" class="page active">
+      <section id="guide" class="page active">
         <div class="page-heading">
           <div>
-            <h2>首頁總覽</h2>
-            <p>老闆娘一打開就能看到今天營收、庫存提醒和待處理進貨。</p>
+            <h2>功能導覽</h2>
+            <p>選擇今天要處理的工作。本頁只提供功能入口，不進行資料計算。</p>
           </div>
-          <span id="todayLabel" class="date-pill"></span>
         </div>
 
-        <div id="dashboardMetrics" class="metric-grid"></div>
-
-        <div class="content-grid two-col">
-          <article class="card">
-            <div class="card-title">
-              <h3>今日狀況</h3>
-              <span id="dashboardAlertTag" class="tag tag-normal">正常</span>
+        <div class="content-grid two-col guide-grid">
+          <article class="card guide-card">
+            <div>
+              <h3>記錄客人購買的餐點</h3>
+              <p>選擇商品與數量，完成銷售後依配方自動扣除原料庫存。</p>
             </div>
-            <div id="dashboardAlerts" class="alert-list"></div>
+            <button class="btn btn-primary" data-jump="sales">前往銷售紀錄</button>
           </article>
 
-          <article class="card">
-            <div class="card-title">
-              <h3>備貨清單</h3>
-              <span class="tag tag-normal">最近一次計算</span>
+          <article class="card guide-card">
+            <div>
+              <h3>盤點原料或登記報廢</h3>
+              <p>查看現有庫存、安全庫存、保存期限、配方與報廢紀錄。</p>
             </div>
-            <div id="dashboardForecast" class="recommend-list"></div>
-            <button class="btn btn-primary" data-jump="forecast">重新計算備貨</button>
+            <button class="btn btn-secondary" data-jump="inventory">前往庫存管理</button>
+          </article>
+
+          <article class="card guide-card">
+            <div>
+              <h3>建立進貨單或完成驗收</h3>
+              <p>記錄向供應商訂購的原料，收貨驗收後才會增加庫存。</p>
+            </div>
+            <button class="btn btn-secondary" data-jump="purchase">前往進貨管理</button>
+          </article>
+
+          <article class="card guide-card">
+            <div>
+              <h3>估算今天要準備多少</h3>
+              <p>依天氣、假日、節日與活動條件計算參考備貨量。</p>
+            </div>
+            <button class="btn btn-secondary" data-jump="forecast">前往備貨建議</button>
+          </article>
+
+          <article class="card guide-card">
+            <div>
+              <h3>查看營收與進銷存資料</h3>
+              <p>依日期、商品及原料篩選銷售、進貨、報廢和庫存結果。</p>
+            </div>
+            <button class="btn btn-secondary" data-jump="reports">前往報表分析</button>
+          </article>
+
+          <article class="card guide-card">
+            <div>
+              <h3>維護供應商聯絡資料</h3>
+              <p>新增、修改或刪除供應商，供建立進貨單時選擇。</p>
+            </div>
+            <button class="btn btn-secondary" data-jump="suppliers">前往供應商管理</button>
           </article>
         </div>
-
-        <article class="card">
-          <div class="card-title">
-            <h3>常用操作</h3>
-            <p>尖峰時段先點這裡，少找選單。</p>
-          </div>
-          <div class="quick-actions">
-            <button class="btn btn-primary" data-jump="sales">新增銷售</button>
-            <button class="btn btn-secondary" data-jump="purchase">進貨驗收</button>
-            <button class="btn btn-secondary" data-jump="inventory">庫存盤點</button>
-            <button class="btn btn-secondary" data-jump="reports">查看報表</button>
-          </div>
-        </article>
-
       </section>
 
       <section id="sales" class="page">
         <div class="page-heading">
           <div>
             <h2>銷售紀錄</h2>
-            <p>用商品按鈕快速點選，完成銷售時會依物料清單自動扣庫存。</p>
+            <p>可直接輸入數量或使用加減按鈕，完成銷售時會依物料清單自動扣庫存。</p>
           </div>
         </div>
 
@@ -94,7 +109,7 @@
           <article class="card">
             <div class="card-title">
               <h3>快速點餐</h3>
-              <span class="tag tag-normal">按 + - 調整</span>
+              <span class="tag tag-normal">可直接輸入數量</span>
             </div>
             <div id="productGrid" class="product-grid"></div>
           </article>
@@ -110,7 +125,6 @@
               <strong id="salesTotal">$0</strong>
             </div>
             <div class="button-row">
-              <button id="addSaleBtn" class="btn btn-secondary">加入銷售清單</button>
               <button id="completeSaleBtn" class="btn btn-primary">完成銷售</button>
             </div>
           </article>
@@ -119,7 +133,7 @@
         <article class="card">
           <div class="card-title">
             <h3>今日銷售明細</h3>
-            <p>刪除誤記項目時，系統會把原料庫存加回來。</p>
+            <p>同一天的相同商品會合併成一筆；數量記錯可直接修改。</p>
           </div>
           <div class="table-wrap">
             <table>
@@ -297,6 +311,8 @@
                   <th>供應商</th>
                   <th>品項</th>
                   <th>訂購數量</th>
+                  <th>實收數量</th>
+                  <th>品質備註</th>
                   <th>狀態</th>
                   <th>操作</th>
                 </tr>
@@ -344,8 +360,7 @@
               <label>嘉義市活動
                 <select id="cityEvent">
                   <option value="none">無</option>
-                  <option value="small">小型</option>
-                  <option value="large">大型</option>
+                  <option value="yes">有</option>
                 </select>
               </label>
               <button class="btn btn-primary form-full" type="submit">重新計算備貨</button>
@@ -401,13 +416,13 @@
         <article class="card">
           <div class="card-title">
             <h3>篩選條件</h3>
-            <p>開始日期不可晚於結束日期。</p>
+            <p>商品會篩選營收與銷售；原料會篩選進貨、報廢及庫存明細。</p>
           </div>
           <form id="reportFilter" class="form-grid report-filter">
             <label>開始日期<input id="startDate" type="date"></label>
             <label>結束日期<input id="endDate" type="date"></label>
-            <label>商品<select id="filterProduct"></select></label>
-            <label>原料<select id="filterMaterial"></select></label>
+            <label>商品（營收與銷售）<select id="filterProduct"></select></label>
+            <label>原料（進貨、報廢與庫存）<select id="filterMaterial"></select></label>
             <button class="btn btn-primary" type="submit">套用篩選</button>
           </form>
         </article>
@@ -531,6 +546,23 @@
     </div>
   </div>
 
+  <div id="saleEditModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="saleEditTitle">
+    <div class="modal-panel">
+      <h3 id="saleEditTitle">修改銷售數量</h3>
+      <form id="saleEditForm" class="form-grid">
+        <input id="saleEditId" type="hidden">
+        <p id="saleEditProduct" class="form-full helper-text"></p>
+        <label class="form-full">銷售數量<input id="saleEditQty" type="number" min="1" step="1" required></label>
+        <p class="form-full helper-text">儲存後會自動重新計算小計與原料庫存。</p>
+        <div class="button-row form-full">
+          <button class="btn btn-primary" type="submit">儲存修改</button>
+          <button id="closeSaleEditModal" class="btn btn-ghost" type="button">取消</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="api-config.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

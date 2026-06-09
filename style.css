@@ -305,6 +305,29 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.guide-card {
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.guide-card h3 {
+  margin: 0 0 8px;
+  font-size: 21px;
+}
+
+.guide-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.guide-card .btn {
+  align-self: flex-start;
+}
+
 .alert-list,
 .recommend-list,
 .order-summary,
@@ -465,15 +488,22 @@ button {
   font-weight: 900;
 }
 
-.qty-control output {
+.qty-control input {
+  width: 100%;
   height: 44px;
+  padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  display: grid;
-  place-items: center;
-  background: var(--paper-strong);
+  color: var(--coffee);
+  background: #fff;
+  text-align: center;
   font-size: 20px;
   font-weight: 900;
+}
+
+.qty-control input:focus {
+  outline: 3px solid rgba(255, 190, 104, 0.45);
+  border-color: var(--orange);
 }
 
 .order-card {

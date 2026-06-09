@@ -4,7 +4,13 @@ const TODAY = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit"
 }).format(new Date());
-const API_BASE = window.location.protocol === "file:" ? "http://127.0.0.1:5000" : "";
+const CONFIGURED_API_BASE = String(window.APP_CONFIG?.API_BASE_URL || "")
+  .trim()
+  .replace(/\/+$/, "");
+const IS_GITHUB_PAGES = window.location.hostname.endsWith(".github.io");
+const API_BASE = CONFIGURED_API_BASE || (
+  window.location.protocol === "file:" ? "http://127.0.0.1:5000" : ""
+);
 
 let products = [];
 let inventory = [];
@@ -26,6 +32,10 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 
 async function apiFetch(path, options = {}) {
+  if (IS_GITHUB_PAGES && !CONFIGURED_API_BASE) {
+    throw new Error("GitHub Pages 尚未設定線上 API 網址");
+  }
+
   const response = await fetch(`${API_BASE}${path}`, options);
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -124,8 +134,9 @@ async function loadData() {
       date: String(item.purchase_date || "").slice(0, 10),
       supplierId: item.supplier_id,
       itemId: item.material_id,
-      qty: Number(item.qty),
-      receivedQty: ["已驗收", "異常"].includes(item.status) ? Number(item.qty) : null,
+      qty: Number(item.ordered_qty ?? item.qty),
+      receivedQty: item.received_qty == null ? null : Number(item.received_qty),
+      qualityNote: item.quality_note || "",
       status: item.status || "已下單"
     }));
 
@@ -219,7 +230,7 @@ async function submitSaleToDatabase() {
 
     currentOrder = {};
     hasPendingSale = false;
-    showToast("銷售資料已成功寫入資料庫！");
+    showToast("銷售已完成；同日相同商品已自動合併");
     await loadData();
 
   } catch (error) {
@@ -336,49 +347,6 @@ function reportFilteredWaste() {
   return wasteRecord.filter((r) => r.date >= startDate && r.date <= endDate && (materialFilter === "all" || r.itemId === materialFilter));
 }
 
-//畫面渲染函數群
-function renderDashboard() {
-  $("#todayLabel").textContent = `今日：${TODAY.replaceAll("-", "/")}`;
-
-  const today = todaySales();
-  const revenue = today.reduce((sum, record) => sum + record.price * record.qty, 0);
-  const noodleBowls = today.reduce((sum, record) => getProduct(record.productId)?.isNoodle ? sum + record.qty : sum, 0);
-  const lowItems = inventory.filter((item) => item.stock < item.safeStock);
-  const expiringItems = inventory.filter((item) => Number.isFinite(item.expiryDays) && item.expiryDays <= 1);
-  const pendingOrders = purchaseOrders.filter((order) => order.status === "已下單");
-
-  $("#dashboardMetrics").innerHTML = [
-    { label: "今日營收", value: formatMoney(revenue), note: "由今日銷售明細加總" },
-    { label: "今日涼麵銷售", value: `${formatQty(noodleBowls)} 碗`, note: "涼麵小、涼麵大合計" },
-    { label: "今日銷售筆數", value: `${today.length} 筆`, note: "salesRecord 自動計算" },
-    { label: "低庫存品項", value: `${lowItems.length} 項`, note: lowItems.length ? lowItems.map((i) => i.name).join("、") : "目前正常", tone: lowItems.length ? "warning" : "" }
-  ].map((metric) => `
-    <article class="metric-card ${metric.tone || ""}">
-      <span>${metric.label}</span>
-      <strong>${metric.value}</strong>
-      <small>${metric.note}</small>
-    </article>
-  `).join("");
-
-  const alerts = [];
-  lowItems.forEach((i) => alerts.push({ type: "warning", text: `${i.name} 目前 ${formatQty(i.stock)}${i.unit}，低於安全庫存 ${formatQty(i.safeStock)}${i.unit}，建議補貨。` }));
-  expiringItems.forEach((i) => alerts.push({ type: "danger", text: `${i.name} 保存期限剩餘 ${i.expiryDays <= 0 ? "不到 1" : i.expiryDays} 天，請確認是否需使用或報廢。` }));
-  pendingOrders.forEach((o) => alerts.push({ type: "info", text: `${o.id} ${o.itemName} 尚未驗收，收貨後請完成驗收。` }));
-  if (alerts.length === 0) alerts.push({ type: "info", text: "目前沒有低庫存、即將過期或未驗收提醒。" });
-
-  $("#dashboardAlertTag").textContent = alerts.length > 1 ? `${alerts.length} 則提醒` : "正常";
-  $("#dashboardAlertTag").className = `tag ${alerts.length > 1 ? "tag-danger" : "tag-normal"}`;
-  $("#dashboardAlerts").innerHTML = alerts.map((a) => `<div class="alert alert-${a.type}">${a.text}</div>`).join("");
-
-  if (forecastResult) {
-    $("#dashboardForecast").innerHTML = forecastResult.rows.length ? forecastResult.rows.map((row) => `
-      <div><span>${row.name}</span><strong>建議 ${formatQty(row.need)} ${row.unit}</strong></div>
-    `).join("") : `<div class="empty">尚無可換算的主要原料</div>`;
-  } else {
-    $("#dashboardForecast").innerHTML = `<div class="empty">尚未產生備貨建議</div>`;
-  }
-}
-
 function renderProducts() {
   $("#productGrid").innerHTML = products.length ? products.map((product) => {
     const qty = currentOrder[product.id] || 0;
@@ -388,7 +356,7 @@ function renderProducts() {
         <div class="price">${formatMoney(product.price)}</div>
         <div class="qty-control">
           <button type="button" data-action="minus" data-id="${product.id}">-</button>
-          <output>${qty}</output>
+          <input type="number" min="0" step="1" value="${qty}" data-qty-input="${product.id}" aria-label="${product.name}數量">
           <button type="button" data-action="plus" data-id="${product.id}">+</button>
         </div>
       </div>
@@ -417,7 +385,12 @@ function renderSalesTable() {
   table.innerHTML = today.map((r) => `
     <tr>
       <td>${r.productName}</td><td>${formatQty(r.qty)}</td><td>${formatMoney(r.price)}</td><td>${formatMoney(r.price * r.qty)}</td>
-      <td><button class="btn btn-danger btn-small" data-delete-sale="${r.id}">刪除</button></td>
+      <td>
+        <div class="table-actions">
+          <button class="btn btn-secondary btn-small" data-edit-sale="${r.id}">修改</button>
+          <button class="btn btn-danger btn-small" data-delete-sale="${r.id}">刪除</button>
+        </div>
+      </td>
     </tr>
   `).join("");
 }
@@ -486,12 +459,15 @@ function renderPurchaseTable() {
     const disabled = order.status === "已驗收" || order.status === "異常";
     return `
       <tr>
-        <td>${order.id}</td><td>${order.date}</td><td>${supplierNameById(order.supplierId)}</td><td>${order.itemName}</td><td>${formatQty(order.qty)}</td>
+        <td>${order.id}</td><td>${order.date}</td><td>${supplierNameById(order.supplierId)}</td><td>${order.itemName}</td>
+        <td>${formatQty(order.qty)}</td>
+        <td>${order.receivedQty == null ? "尚未驗收" : formatQty(order.receivedQty)}</td>
+        <td>${order.qualityNote || "尚未驗收"}</td>
         <td><span class="tag ${purchaseStatusClass(order.status)}">${order.status}</span></td>
         <td><button class="btn btn-secondary btn-small" data-receive="${order.id}" ${disabled ? "disabled" : ""}>${disabled ? "已完成" : "驗收"}</button></td>
       </tr>
     `;
-  }).join("") : `<tr><td colspan="7" class="empty">尚未建立進貨單</td></tr>`;
+  }).join("") : `<tr><td colspan="9" class="empty">尚未建立進貨單</td></tr>`;
 }
 
 function renderForecastTable() {
@@ -537,12 +513,36 @@ function renderReports() {
   const saleQty = sales.reduce((sum, r) => sum + r.qty, 0);
   const purchaseQty = purchaseInRange.reduce((sum, o) => sum + (o.receivedQty ?? 0), 0);
   const wasteQty = wastes.reduce((sum, r) => sum + r.qty, 0);
+  const selectedMaterial = materialFilter === "all" ? null : getInventoryItem(materialFilter);
+  const completedPurchases = purchaseInRange.filter((order) => order.receivedQty !== null);
+  const purchaseMetric = selectedMaterial
+    ? {
+        label: `${selectedMaterial.name}期間進貨量`,
+        value: `${formatQty(purchaseQty)} ${selectedMaterial.unit}`,
+        note: "此日期區間內完成驗收並加入庫存的數量"
+      }
+    : {
+        label: "期間進貨紀錄",
+        value: `${completedPurchases.length} 筆`,
+        note: "全部原料單位不同，數量請查看下方進銷存總覽"
+      };
+  const wasteMetric = selectedMaterial
+    ? {
+        label: `${selectedMaterial.name}期間報廢量`,
+        value: `${formatQty(wasteQty)} ${selectedMaterial.unit}`,
+        note: "此日期區間內登記並從庫存扣除的數量"
+      }
+    : {
+        label: "期間報廢紀錄",
+        value: `${wastes.length} 筆`,
+        note: "全部原料單位不同，數量請查看下方損耗分析"
+      };
 
   $("#reportSummary").innerHTML = [
     { label: "期間營收", value: formatMoney(revenue), note: `${startDate} 至 ${endDate}` },
-    { label: "期間銷售量", value: `${formatQty(saleQty)} 份`, note: "依商品篩選結果加總" },
-    { label: "期間進貨量", value: `${formatQty(purchaseQty)} 單位`, note: "已驗收實收量" },
-    { label: "期間報廢量", value: `${formatQty(wasteQty)} 單位`, note: "依原料篩選結果加總" }
+    { label: "期間銷售量", value: `${formatQty(saleQty)} 份`, note: "依上方商品條件統計" },
+    purchaseMetric,
+    wasteMetric
   ].map((metric) => `
     <article class="metric-card"><span>${metric.label}</span><strong>${metric.value}</strong><small>${metric.note}</small></article>
   `).join("");
@@ -624,7 +624,6 @@ function resetSupplierForm() {
 }
 
 function renderAll() {
-  renderDashboard();
   renderProducts();
   renderCurrentOrder();
   renderSalesTable();
@@ -657,23 +656,65 @@ function bindSalesEvents() {
     renderCurrentOrder();
   });
 
-  $("#addSaleBtn").addEventListener("click", () => {
-    showToast("暫存加入本筆銷售清單（請點擊完成銷售以同步至後端）", "warning");
+  $("#productGrid").addEventListener("input", (event) => {
+    const input = event.target.closest("[data-qty-input]");
+    if (!input) return;
+    const qty = Math.max(0, Math.floor(Number(input.value) || 0));
+    input.value = qty;
+    currentOrder[input.dataset.qtyInput] = qty;
+    renderCurrentOrder();
   });
 
   $("#completeSaleBtn").addEventListener("click", submitSaleToDatabase);
 
   $("#salesTable").addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-delete-sale]");
-    if (!button || !confirm("確定刪除這筆銷售紀錄嗎？庫存將自動加回。")) return;
+    const editButton = event.target.closest("[data-edit-sale]");
+    const deleteButton = event.target.closest("[data-delete-sale]");
+
+    if (editButton) {
+      const record = salesRecord.find((item) => item.id === editButton.dataset.editSale);
+      if (!record) return;
+      $("#saleEditId").value = record.id;
+      $("#saleEditProduct").textContent = `商品：${record.productName}（目前 ${formatQty(record.qty)} 份）`;
+      $("#saleEditQty").value = record.qty;
+      $("#saleEditModal").classList.remove("hidden");
+      $("#saleEditQty").focus();
+      return;
+    }
+
+    if (!deleteButton || !confirm("確定刪除這筆銷售紀錄嗎？庫存將自動加回。")) return;
     try {
-      const result = await apiFetch(`/sales/delete/${button.dataset.deleteSale}`, { method: "DELETE" });
+      const result = await apiFetch(`/sales/delete/${deleteButton.dataset.deleteSale}`, { method: "DELETE" });
       showToast(result.message || "銷售紀錄已刪除");
       await loadData();
     } catch (error) {
       showToast(error.message, "error");
     }
   });
+
+  $("#saleEditForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const saleId = $("#saleEditId").value;
+    const qty = Number($("#saleEditQty").value);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      showToast("銷售數量必須是大於 0 的整數", "error");
+      return;
+    }
+    try {
+      const result = await apiFetch(`/sales/update/${saleId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qty })
+      });
+      $("#saleEditModal").classList.add("hidden");
+      showToast(result.message || "銷售數量已修改");
+      await loadData();
+    } catch (error) {
+      showToast(error.message, "error");
+    }
+  });
+
+  $("#closeSaleEditModal").addEventListener("click", () => $("#saleEditModal").classList.add("hidden"));
 }
 
 function bindInventoryEvents() {

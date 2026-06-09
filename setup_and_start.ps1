@@ -19,6 +19,35 @@ function Test-Server {
     }
 }
 
+function Stop-ExistingServer {
+    $processIds = @()
+
+    if (Test-Path -LiteralPath (Join-Path $ProjectDir ".server.pid")) {
+        $savedPid = (Get-Content -LiteralPath (Join-Path $ProjectDir ".server.pid") -Raw).Trim()
+        if ($savedPid -match "^\d+$") {
+            $processIds += [int]$savedPid
+        }
+    }
+
+    $listeners = netstat -ano |
+        Select-String "^\s*TCP\s+\S+:5000\s+\S+\s+LISTENING\s+(\d+)\s*$"
+    foreach ($listener in $listeners) {
+        if ($listener.Matches.Count -gt 0) {
+            $processIds += [int]$listener.Matches[0].Groups[1].Value
+        }
+    }
+
+    foreach ($processId in ($processIds | Select-Object -Unique)) {
+        Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+    }
+
+    Remove-Item -LiteralPath (Join-Path $ProjectDir ".server.pid") -Force -ErrorAction SilentlyContinue
+
+    if ($processIds.Count -gt 0) {
+        Start-Sleep -Milliseconds 500
+    }
+}
+
 function Find-Python {
     $candidates = @(
         (Join-Path $env:LOCALAPPDATA "Programs\Python\Python312\python.exe"),
@@ -41,10 +70,7 @@ function Find-Python {
     return $null
 }
 
-if (Test-Server) {
-    Start-Process $Url
-    exit 0
-}
+Stop-ExistingServer
 
 if (-not (Test-Path -LiteralPath $VenvPython)) {
     $BasePython = Find-Python

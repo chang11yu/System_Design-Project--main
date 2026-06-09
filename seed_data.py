@@ -51,27 +51,24 @@ def seed_database():
         db.session.add_all(products + materials + suppliers + boms)
         db.session.commit()
 
-    initial_records = [
-        Sales(sale_id="SR-DEMO-001", product_id="P01", qty=3, subtotal=180, sale_date=now),
-        Sales(sale_id="SR-DEMO-002", product_id="P02", qty=2, subtotal=150, sale_date=now),
-        Sales(sale_id="SR-DEMO-003", product_id="P01", qty=5, subtotal=300, sale_date=now - timedelta(days=1)),
-    ]
-    for record in initial_records:
-        if not Sales.query.get(record.sale_id):
-            db.session.add(record)
+    if not Sales.query.first():
+        initial_records = [
+            Sales(sale_id="SR-DEMO-001", product_id="P01", qty=3, subtotal=180, sale_date=now),
+            Sales(sale_id="SR-DEMO-002", product_id="P02", qty=2, subtotal=150, sale_date=now),
+            Sales(sale_id="SR-DEMO-003", product_id="P01", qty=5, subtotal=300, sale_date=now - timedelta(days=1)),
+        ]
+        db.session.add_all(initial_records)
 
-    history = [
-        ("P01", 8), ("P02", 5), ("P03", 3), ("P04", 4),
-        ("P01", 11), ("P05", 6), ("P02", 7), ("P01", 9),
-        ("P03", 4), ("P04", 5), ("P01", 12), ("P02", 6),
-        ("P05", 8), ("P01", 10)
-    ]
-    prices = {"P01": 60, "P02": 75, "P03": 85, "P04": 80, "P05": 30}
-    for index, (product_id, qty) in enumerate(history, start=1):
-        sale_id = f"SR-HISTORY-{index:02d}"
-        if not Sales.query.get(sale_id):
+        history = [
+            ("P01", 8), ("P02", 5), ("P03", 3), ("P04", 4),
+            ("P01", 11), ("P05", 6), ("P02", 7), ("P01", 9),
+            ("P03", 4), ("P04", 5), ("P01", 12), ("P02", 6),
+            ("P05", 8), ("P01", 10)
+        ]
+        prices = {"P01": 60, "P02": 75, "P03": 85, "P04": 80, "P05": 30}
+        for index, (product_id, qty) in enumerate(history, start=1):
             db.session.add(Sales(
-                sale_id=sale_id,
+                sale_id=f"SR-HISTORY-{index:02d}",
                 product_id=product_id,
                 qty=qty,
                 subtotal=prices[product_id] * qty,
@@ -92,6 +89,9 @@ def seed_database():
                 supplier_id=supplier_id,
                 material_id=material_id,
                 qty=qty,
+                ordered_qty=qty,
+                received_qty=qty if status in ("已驗收", "異常") else None,
+                quality_note="歷史範例資料" if status in ("已驗收", "異常") else "",
                 status=status,
                 purchase_date=now - timedelta(days=days_ago)
             ))

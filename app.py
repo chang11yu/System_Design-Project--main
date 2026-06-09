@@ -1,4 +1,6 @@
-from flask import Flask, jsonify, send_from_directory
+import os
+
+from flask import Flask, abort, jsonify, send_from_directory
 from flask_cors import CORS
 from config import Config
 from extensions import db
@@ -6,8 +8,13 @@ from extensions import db
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    
-    CORS(app)
+
+    cors_origins = [
+        origin.strip()
+        for origin in os.getenv("CORS_ORIGINS", "*").split(",")
+        if origin.strip()
+    ]
+    CORS(app, resources={r"/*": {"origins": cors_origins}})
     db.init_app(app)
 
     with app.app_context():
@@ -19,15 +26,25 @@ def create_app():
         from models.BOM import BOM
         from models.Scrap_record import ScrapRecord
         db.create_all()
+        from utils.schema import ensure_purchase_columns
+        ensure_purchase_columns()
         from seed_data import seed_database
         seed_database()
+        from utils.sales import consolidate_daily_sales
+        consolidate_daily_sales()
 
     @app.route("/")
     def index():
         return send_from_directory(app.root_path, "index.html")
 
+    @app.route("/health")
+    def health():
+        return jsonify({"status": "ok"})
+
     @app.route("/<path:filename>")
     def static_files(filename):
+        if filename not in {"style.css", "script.js", "api-config.js"}:
+            abort(404)
         return send_from_directory(app.root_path, filename)
 
     # 在 Flask 後端寫一個大打包的 API，取代原本的 get_data.php
@@ -76,4 +93,9 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
+    app.run(
+        host=os.getenv("HOST", "127.0.0.1"),
+        port=int(os.getenv("PORT", "5000")),
+        debug=False,
+        use_reloader=False
+    )
