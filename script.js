@@ -19,6 +19,7 @@ let purchaseOrders = [];
 let salesRecord = [];
 let wasteRecord = [];
 let bomRecords = [];
+let inventoryBatches = [];
 let bomRules = {};
 let forecastResult = null; // 儲存後端回傳的備貨建議結果
 
@@ -137,6 +138,7 @@ async function loadData() {
       qty: Number(item.ordered_qty ?? item.qty),
       receivedQty: item.received_qty == null ? null : Number(item.received_qty),
       qualityNote: item.quality_note || "",
+      expiryDate: item.expiry_date || null,
       status: item.status || "已下單"
     }));
 
@@ -161,6 +163,15 @@ async function loadData() {
       productId: item.product_id,
       itemId: item.material_id,
       qty: Number(item.consume_qty)
+    }));
+    inventoryBatches = (result.inventoryBatches || []).map((item) => ({
+      id: Number(item.batch_id),
+      itemId: item.material_id,
+      purchaseId: item.purchase_id,
+      qty: Number(item.quantity),
+      receivedDate: item.received_date,
+      expiryDate: item.expiry_date,
+      source: item.source
     }));
     rebuildDerivedData();
 
@@ -307,10 +318,36 @@ function getInventoryItem(itemId) { return inventory.find((item) => item.id === 
 function supplierNameById(id) { return suppliers.find((s) => s.id === id)?.name || "未指定"; }
 
 function statusInfo(item) {
-  if (Number.isFinite(item.expiryDays) && item.expiryDays < 0) return { text: "已過期", className: "tag-expired" };
-  if (Number.isFinite(item.expiryDays) && item.expiryDays <= 1) return { text: "即將過期", className: "tag-danger" };
+  const batches = inventoryBatches.filter((batch) => batch.itemId === item.id && batch.qty > 0);
+  if (batches.some((batch) => batch.expiryDate && batch.expiryDate < TODAY)) {
+    return { text: "含過期批次", className: "tag-expired" };
+  }
+  if (batches.some((batch) => batch.expiryDate && daysUntil(batch.expiryDate) <= 1)) {
+    return { text: "有批次即將到期", className: "tag-danger" };
+  }
   if (item.stock < item.safeStock) return { text: "低庫存", className: "tag-low" };
   return { text: "正常", className: "tag-normal" };
+}
+
+function daysUntil(dateString) {
+  if (!dateString) return Infinity;
+  const today = new Date(`${TODAY}T00:00:00`);
+  const target = new Date(`${dateString}T00:00:00`);
+  return Math.round((target - today) / 86400000);
+}
+
+function batchStatusInfo(batch) {
+  const days = daysUntil(batch.expiryDate);
+  if (!batch.expiryDate) return { text: "未記錄", className: "tag-low" };
+  if (days < 0) return { text: "已過期", className: "tag-expired" };
+  if (days <= 1) return { text: "即將到期", className: "tag-danger" };
+  return { text: "正常", className: "tag-normal" };
+}
+
+function addDays(dateString, days) {
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() + Number(days || 0));
+  return new Intl.DateTimeFormat("en-CA").format(date);
 }
 
 function purchaseStatusClass(status) {
@@ -398,10 +435,14 @@ function renderSalesTable() {
 function renderInventoryTable() {
   $("#inventoryTable").innerHTML = inventory.length ? inventory.map((item) => {
     const status = statusInfo(item);
+    const nearestExpiry = inventoryBatches
+      .filter((batch) => batch.itemId === item.id && batch.qty > 0 && batch.expiryDate)
+      .map((batch) => batch.expiryDate)
+      .sort()[0];
     return `
       <tr>
         <td>${item.id}</td><td>${item.name}</td><td>${formatQty(item.stock)}</td><td>${item.unit}</td><td>${formatQty(item.safeStock)}</td>
-        <td>${Number.isFinite(item.expiryDays) ? (item.expiryDays < 0 ? "已過期" : `${item.expiryDays} 天`) : "未設定"}</td><td><span class="tag ${status.className}">${status.text}</span></td>
+        <td>${nearestExpiry || "無庫存批次"}</td><td><span class="tag ${status.className}">${status.text}</span></td>
         <td>
           <div class="table-actions">
             <button class="btn btn-secondary btn-small" data-adjust-stock="${item.id}" data-delta="1">+1</button>
@@ -414,6 +455,26 @@ function renderInventoryTable() {
 
   $("#wasteItem").innerHTML = inventory.map((i) => `<option value="${i.id}">${i.name}（目前 ${formatQty(i.stock)}${i.unit}）</option>`).join("");
   $("#poItem").innerHTML = inventory.map((i) => `<option value="${i.id}">${i.name}</option>`).join("");
+}
+
+function renderInventoryBatchTable() {
+  $("#inventoryBatchTable").innerHTML = inventoryBatches.length
+    ? inventoryBatches.map((batch) => {
+        const item = getInventoryItem(batch.itemId);
+        const status = batchStatusInfo(batch);
+        return `
+          <tr>
+            <td>B${String(batch.id).padStart(4, "0")}</td>
+            <td>${item?.name || batch.itemId}</td>
+            <td>${batch.purchaseId || batch.source}</td>
+            <td>${batch.receivedDate || "-"}</td>
+            <td>${batch.expiryDate || "未記錄"}</td>
+            <td>${formatQty(batch.qty)} ${item?.unit || ""}</td>
+            <td><span class="tag ${status.className}">${status.text}</span></td>
+          </tr>
+        `;
+      }).join("")
+    : `<tr><td colspan="7" class="empty">目前沒有庫存批次</td></tr>`;
 }
 
 function renderBomSection() {
@@ -463,11 +524,12 @@ function renderPurchaseTable() {
         <td>${formatQty(order.qty)}</td>
         <td>${order.receivedQty == null ? "尚未驗收" : formatQty(order.receivedQty)}</td>
         <td>${order.qualityNote || "尚未驗收"}</td>
+        <td>${order.expiryDate || (disabled ? "歷史資料未記錄" : "尚未驗收")}</td>
         <td><span class="tag ${purchaseStatusClass(order.status)}">${order.status}</span></td>
         <td><button class="btn btn-secondary btn-small" data-receive="${order.id}" ${disabled ? "disabled" : ""}>${disabled ? "已完成" : "驗收"}</button></td>
       </tr>
     `;
-  }).join("") : `<tr><td colspan="9" class="empty">尚未建立進貨單</td></tr>`;
+  }).join("") : `<tr><td colspan="10" class="empty">尚未建立進貨單</td></tr>`;
 }
 
 function renderForecastTable() {
@@ -628,6 +690,7 @@ function renderAll() {
   renderCurrentOrder();
   renderSalesTable();
   renderInventoryTable();
+  renderInventoryBatchTable();
   renderBomSection();
   renderWasteTable();
   renderSupplierOptions();
@@ -903,8 +966,10 @@ function bindPurchaseEvents() {
     const button = event.target.closest("[data-receive]");
     if (!button || button.disabled) return;
     const order = purchaseOrders.find((item) => item.id === button.dataset.receive);
+    const inventoryItem = getInventoryItem(order.itemId);
     $("#receiveId").value = order.id;
     $("#receiveQty").value = order.qty;
+    $("#receiveExpiryDate").value = addDays(TODAY, inventoryItem?.expiryDays || 0);
     $("#receiveNote").value = "品質正常";
     $("#modal").classList.remove("hidden");
   });
@@ -914,6 +979,7 @@ function bindPurchaseEvents() {
     event.preventDefault();
     const poId = $("#receiveId").value;
     const receiveQty = Number($("#receiveQty").value);
+    const expiryDate = $("#receiveExpiryDate").value;
     const note = $("#receiveNote").value.trim();
 
     try {
@@ -922,6 +988,7 @@ function bindPurchaseEvents() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           received_qty: receiveQty,
+          expiry_date: expiryDate,
           note: note
         })
       });

@@ -58,7 +58,7 @@
           <article class="card guide-card">
             <div>
               <h3>盤點原料或登記報廢</h3>
-              <p>查看現有庫存、安全庫存、保存期限、配方與報廢紀錄。</p>
+              <p>查看原料總庫存、各批到期日、配方與報廢紀錄。</p>
             </div>
             <button class="btn btn-secondary" data-jump="inventory">前往庫存管理</button>
           </article>
@@ -171,7 +171,7 @@
               <label>現有庫存<input id="invStock" type="number" min="0" step="0.01" value="0" required></label>
               <label>單位<input id="invUnit" type="text" placeholder="包、條、罐" required></label>
               <label>安全庫存<input id="invSafe" type="number" min="0" step="0.01" value="1" required></label>
-              <label>保存期限（天）<input id="invExpiry" type="number" min="0" value="3" required></label>
+              <label>預設保存天數<input id="invExpiry" type="number" min="0" value="3" required></label>
               <button class="btn btn-primary form-full" type="submit">新增原料</button>
             </form>
           </article>
@@ -193,7 +193,7 @@
         <article class="card">
           <div class="card-title">
             <h3>原料庫存表</h3>
-            <p>系統會依現有庫存與保存期限自動標示狀態。</p>
+            <p>同一原料顯示總庫存；最近到期日取自尚有庫存的最早批次。</p>
           </div>
           <div class="table-wrap">
             <table>
@@ -204,12 +204,37 @@
                   <th>現有庫存</th>
                   <th>單位</th>
                   <th>安全庫存</th>
-                  <th>保存期限</th>
+                  <th>最近到期日</th>
                   <th>狀態</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody id="inventoryTable"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-title">
+            <div>
+              <h3>庫存批次明細</h3>
+              <p>不同進貨日期與到期日分開保存；銷售及報廢會優先扣除最早到期批次。</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>批次</th>
+                  <th>原料</th>
+                  <th>來源</th>
+                  <th>入庫日期</th>
+                  <th>到期日</th>
+                  <th>剩餘數量</th>
+                  <th>狀態</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryBatchTable"></tbody>
             </table>
           </div>
         </article>
@@ -313,6 +338,7 @@
                   <th>訂購數量</th>
                   <th>實收數量</th>
                   <th>品質備註</th>
+                  <th>到期日</th>
                   <th>狀態</th>
                   <th>操作</th>
                 </tr>
@@ -537,6 +563,7 @@
       <form id="receiveForm" class="form-grid">
         <input id="receiveId" type="hidden">
         <label>實收數量<input id="receiveQty" type="number" min="0" step="0.01" required></label>
+        <label>本批到期日<input id="receiveExpiryDate" type="date" required></label>
         <label class="form-full">品質備註<input id="receiveNote" type="text" placeholder="例如：品質正常、數量短少"></label>
         <div class="button-row form-full">
           <button class="btn btn-primary" type="submit">完成驗收</button>

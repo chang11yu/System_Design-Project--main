@@ -1,22 +1,24 @@
 WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
  * Running on http://127.0.0.1:5000
 Press CTRL+C to quit
-127.0.0.1 - - [09/Jun/2026 23:11:49] "GET /api/get_all_data HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:11:49] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:11:49] "GET /style.css HTTP/1.1" 304 -
-127.0.0.1 - - [09/Jun/2026 23:11:49] "GET /api-config.js HTTP/1.1" 304 -
-127.0.0.1 - - [09/Jun/2026 23:11:49] "GET /script.js HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:11:49] "GET /api/get_all_data HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:11:50] "POST /forecast/calculate HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:12:14] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:12:14] "GET /style.css HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:12:14] "GET /api-config.js HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:12:14] "GET /script.js HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:12:14] "GET /api/get_all_data HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:12:14] "POST /forecast/calculate HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:12:37] "GET / HTTP/1.1" 304 -
-127.0.0.1 - - [09/Jun/2026 23:12:37] "GET /style.css HTTP/1.1" 304 -
-127.0.0.1 - - [09/Jun/2026 23:12:37] "GET /api-config.js HTTP/1.1" 304 -
-127.0.0.1 - - [09/Jun/2026 23:12:37] "GET /script.js HTTP/1.1" 304 -
-127.0.0.1 - - [09/Jun/2026 23:12:37] "GET /api/get_all_data HTTP/1.1" 200 -
-127.0.0.1 - - [09/Jun/2026 23:12:37] "POST /forecast/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:20] "GET /api/get_all_data HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:20] "GET / HTTP/1.1" 304 -
+127.0.0.1 - - [10/Jun/2026 01:14:20] "GET /style.css HTTP/1.1" 304 -
+127.0.0.1 - - [10/Jun/2026 01:14:21] "GET /api-config.js HTTP/1.1" 304 -
+127.0.0.1 - - [10/Jun/2026 01:14:21] "GET /script.js HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:21] "GET /api/get_all_data HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:22] "POST /forecast/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:48] "GET /api/get_all_data HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:52] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:52] "GET /style.css HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:52] "GET /api-config.js HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:52] "GET /script.js HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:52] "GET /api/get_all_data HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:14:52] "POST /forecast/calculate HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:15:26] "GET /api/get_all_data HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:15:29] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:15:29] "GET /style.css HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:15:29] "GET /api-config.js HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:15:29] "GET /script.js HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:15:29] "GET /api/get_all_data HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 01:15:29] "POST /forecast/calculate HTTP/1.1" 200 -

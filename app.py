@@ -25,11 +25,14 @@ def create_app():
         from models.Supplier import Supplier
         from models.BOM import BOM
         from models.Scrap_record import ScrapRecord
+        from models.InventoryBatch import InventoryBatch, SaleBatchUsage
         db.create_all()
         from utils.schema import ensure_purchase_columns
         ensure_purchase_columns()
         from seed_data import seed_database
         seed_database()
+        from utils.inventory_batches import ensure_initial_inventory_batches
+        ensure_initial_inventory_batches()
         from utils.sales import consolidate_daily_sales
         consolidate_daily_sales()
 
@@ -58,6 +61,7 @@ def create_app():
           from models.Supplier import Supplier
           from models.BOM import BOM
           from models.Scrap_record import ScrapRecord
+          from utils.inventory_batches import inventory_batch_rows
 
           return jsonify({
             "success": True,
@@ -67,7 +71,8 @@ def create_app():
             "salesRecords": [s.to_dict() for s in Sales.query.all()],
             "suppliers": [s.to_dict() for s in Supplier.query.all()],
             "bomRecords": [b.to_dict() for b in BOM.query.all()],
-            "wasteRecords": [r.to_dict() for r in ScrapRecord.query.all()]
+            "wasteRecords": [r.to_dict() for r in ScrapRecord.query.all()],
+            "inventoryBatches": inventory_batch_rows()
           })
         except Exception as e:
             return jsonify({"success": False, "message": str(e)}), 500
